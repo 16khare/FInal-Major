@@ -13,82 +13,79 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Deploy to EC2
-      uses: appleboy/ssh-action@v0.1.6
-      with:
-        host: ${{ secrets.AWS_HOST }}
-        username: ${{ secrets.AWS_USER }}
-        key: ${{ secrets.AWS_SSH_KEY }}
-        script: |
-          # Update and install packages
-          sudo apt update && sudo apt upgrade -y
+    - name: Create major.pem from secret
+      run: |
+        echo "${{ secrets.AWS_SSH_KEY }}" > major.pem
+        chmod 400 major.pem
 
-          # Install Node.js, Python, Nginx, and PM2 if missing
-          if ! command -v node &> /dev/null; then
-            curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-            sudo apt install -y nodejs
-          fi
-          sudo apt install -y nginx python3 python3-pip
-          sudo npm install -g pm2
+    - name: Update Node.js to v20
+      env:
+        EC2_PUBLIC_IP: ${{ secrets.AWS_HOST }}
+      run: |
+        ssh -o StrictHostKeyChecking=no -i major.pem ubuntu@$EC2_PUBLIC_IP "curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt install -y nodejs"
 
-          # Go to home directory
-          cd /home/ubuntu
+    - name: Install Dependencies and Configure Nginx
+      env:
+        EC2_PUBLIC_IP: ${{ secrets.AWS_HOST }}
+      run: |
+        ssh -o StrictHostKeyChecking=no -i major.pem ubuntu@$EC2_PUBLIC_IP << 'EOF'
+        sudo apt update -y
+        sudo apt install -y nginx python3 python3-pip
+        sudo npm install -g pm2
+        sudo systemctl start nginx
+        sudo systemctl enable nginx
+        EOF
 
-          # If repo folder doesn't exist, clone it
-          if [ ! -d "project" ]; then
-            git clone https://github.com/your-username/your-repo.git project
-          fi
+    - name: Create Application Directories on EC2
+      env:
+        EC2_PUBLIC_IP: ${{ secrets.AWS_HOST }}
+      run: |
+        ssh -o StrictHostKeyChecking=no -i major.pem ubuntu@$EC2_PUBLIC_IP "mkdir -p /home/ubuntu/project"
 
-          # Go into project folder
-          cd project
-          git pull origin main
+    - name: Copy All Project Files to EC2
+      env:
+        EC2_PUBLIC_IP: ${{ secrets.AWS_HOST }}
+      run: |
+        scp -i major.pem -r ./controllers ./middlewares ./routes ./js ./css ./fonts ./images ./db.js ./server.js ./package.json ./package-lock.json ./index.html ./about.html ./climate.html ./contact.html ./gallery.html ./icons.html ./location.html ./login.html ./services.html ./temperature.html ./types_of_crops.html ./types_of_irrigation.html ./types_of_soil.html ./typography.html ./auth.js .env ubuntu@$EC2_PUBLIC_IP:/home/ubuntu/project
 
-          # Install Node.js dependencies (if package.json exists)
-          if [ -f "package.json" ]; then
-            npm install || true
-          fi
+    - name: Install Backend Dependencies and Fix Vulnerabilities
+      env:
+        EC2_PUBLIC_IP: ${{ secrets.AWS_HOST }}
+      run: |
+        ssh -o StrictHostKeyChecking=no -i major.pem ubuntu@$EC2_PUBLIC_IP << 'EOF'
+        cd /home/ubuntu/project
+        npm install
+        npm audit fix --force || true
+        EOF
 
-          # Install Python dependencies (if requirements.txt exists)
-          if [ -f "requirements.txt" ]; then
-            pip3 install -r requirements.txt || true
-          fi
+    - name: Start Backend Application
+      env:
+        EC2_PUBLIC_IP: ${{ secrets.AWS_HOST }}
+      run: |
+        ssh -o StrictHostKeyChecking=no -i major.pem ubuntu@$EC2_PUBLIC_IP << 'EOF'
+        cd /home/ubuntu/project
+        pm2 delete nodeapp || true
+        pm2 start app.js --name nodeapp
+        EOF
 
-          # Restart Node and Flask apps
-          pm2 delete nodeapp || true
-          pm2 delete flaskapp || true
+    - name: Copy Nginx Configuration to EC2
+      env:
+        EC2_PUBLIC_IP: ${{ secrets.AWS_HOST }}
+      run: |
+        scp -i major.pem ./nginx.conf ubuntu@$EC2_PUBLIC_IP:/home/ubuntu/project/nginx.conf
 
-          # Start Node.js app
-          pm2 start app.js --name nodeapp
+    - name: Configure Nginx to Serve Application
+      env:
+        EC2_PUBLIC_IP: ${{ secrets.AWS_HOST }}
+      run: |
+        ssh -o StrictHostKeyChecking=no -i major.pem ubuntu@$EC2_PUBLIC_IP << 'EOF'
+        sudo cp /home/ubuntu/project/nginx.conf /etc/nginx/sites-available/project-app
+        sudo ln -s /etc/nginx/sites-available/project-app /etc/nginx/sites-enabled/
+        sudo nginx -t
+        sudo systemctl reload nginx
+        EOF
 
-          # Start Flask app
-          pm2 start "python3 ai_model.py" --name flaskapp
-
-          # Configure Nginx if not already configured
-          if [ ! -f "/etc/nginx/sites-available/project-app" ]; then
-            sudo bash -c 'cat > /etc/nginx/sites-available/project-app' <<EOF
-server {
-    listen 80;
-    server_name 16.170.143.235;  # Replace with EC2 IP or domain
-
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_cache_bypass \$http_upgrade;
-    }
-
-    location /ai/ {
-        proxy_pass http://localhost:5000/;
-        proxy_set_header Host \$host;
-    }
-}
-EOF
-            sudo ln -s /etc/nginx/sites-available/project-app /etc/nginx/sites-enabled/
-            sudo nginx -t
-            sudo systemctl restart nginx
-          fi
-
-          # Save PM2 process list
-          pm2 save
+    - name: Remove major.pem
+      if: always()
+      run: |
+        rm -f major.pem
