@@ -98,7 +98,6 @@ jobs:
       run: |
         ssh -o StrictHostKeyChecking=no -i major.pem ubuntu@$EC2_PUBLIC_IP << 'EOF'
         sudo cp /home/ubuntu/project/nginx.conf /etc/nginx/nginx.conf
-        sudo ln -s /etc/nginx/sites-available/project-app /etc/nginx/sites-enabled/
         sudo nginx -t
         sudo systemctl reload nginx
         EOF
