@@ -36,17 +36,16 @@ jobs:
         sudo systemctl enable nginx
         EOF
 
-    - name: Create Application Directories on EC2
+    - name: Clone Project Files from GitHub Repo
       env:
         EC2_PUBLIC_IP: ${{ secrets.AWS_HOST }}
       run: |
-        ssh -o StrictHostKeyChecking=no -i major.pem ubuntu@$EC2_PUBLIC_IP "mkdir -p /home/ubuntu/project"
-
-    - name: Copy All Project Files to EC2
-      env:
-        EC2_PUBLIC_IP: ${{ secrets.AWS_HOST }}
-      run: |
-        scp -i major.pem -r ./controllers ./middlewares ./routes ./js ./css ./fonts ./images ./db.js ./server.js ./package.json ./package-lock.json ./index.html ./about.html ./climate.html ./contact.html ./gallery.html ./icons.html ./location.html ./login.html ./services.html ./temperature.html ./types_of_crops.html ./types_of_irrigation.html ./types_of_soil.html ./typography.html ./auth.js .env ubuntu@$EC2_PUBLIC_IP:/home/ubuntu/project
+        ssh -o StrictHostKeyChecking=no -i major.pem ubuntu@$EC2_PUBLIC_IP << 'EOF'
+        cd /home/ubuntu
+        git clone https://github.com/your-username/your-repo.git project
+        cd project
+        git pull origin main
+        EOF
 
     - name: Install Backend Dependencies and Fix Vulnerabilities
       env:
