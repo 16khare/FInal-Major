@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Crop Recommendation</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 30px;
+      background-color: #f2f9f1;
+    }
+    h2 {
+      color: #2e7d32;
+    }
+    form {
+      background-color: white;
+      padding: 20px;
+      border-radius: 10px;
+      width: 400px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    button {
+      margin-top: 20px;
+      background-color: #4caf50;
+      color: white;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      width: 100%;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>AI-Based Crop Recommendation</h2>
+
+  <form id="recommendationForm">
+    <label for="N">Nitrogen (N):</label>
+    <input type="number" id="N" name="N" step="0.1" required>
+
+    <label for="P">Phosphorus (P):</label>
+    <input type="number" id="P" name="P" step="0.1" required>
+
+    <label for="K">Potassium (K):</label>
+    <input type="number" id="K" name="K" step="0.1" required>
+
+    <label for="temperature">Temperature (°C):</label>
+    <input type="number" id="temperature" name="temperature" step="0.1" required>
+
+    <label for="humidity">Humidity (%):</label>
+    <input type="number" id="humidity" name="humidity" step="0.1" required>
+
+    <label for="ph">Soil pH:</label>
+    <input type="number" id="ph" name="ph" step="0.1" required>
+
+    <label for="rainfall">Rainfall (mm):</label>
+    <input type="number" id="rainfall" name="rainfall" step="0.1" required>
+
+    <button type="submit">Get Recommendation</button>
+  </form>
+
+  <p id="result" style="margin-top:20px;font-weight:bold;"></p>
+
+  <script>
+    document.getElementById('recommendationForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const response = await fetch('http://127.0.0.1:5001/predict', {  // Specify the full URL
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          N: parseFloat(document.getElementById('N').value),
+          P: parseFloat(document.getElementById('P').value),
+          K: parseFloat(document.getElementById('K').value),
+          temperature: parseFloat(document.getElementById('temperature').value),
+          humidity: parseFloat(document.getElementById('humidity').value),
+          ph: parseFloat(document.getElementById('ph').value),
+          rainfall: parseFloat(document.getElementById('rainfall').value)
+        })
+      });
+
+      const result = await response.json();
+      document.getElementById('result').innerText =
+        result.recommended_crop
+          ? 'Recommended Crop: ' + result.recommended_crop
+          : 'Error getting recommendation';
+    });
+  </script>
+
+</body>
+</html>
