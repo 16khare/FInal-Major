@@ -36,15 +36,20 @@ jobs:
         sudo systemctl enable nginx
         EOF
 
-    - name: Clone Project Files from GitHub Repo
+    - name: Clone or Pull Project Files from GitHub Repo
       env:
         EC2_PUBLIC_IP: ${{ secrets.AWS_HOST }}
       run: |
         ssh -o StrictHostKeyChecking=no -i major.pem ubuntu@$EC2_PUBLIC_IP << 'EOF'
         cd /home/ubuntu
-        git clone https://github.com/your-username/your-repo.git project
-        cd project
-        git pull origin main
+        if [ -d "project/.git" ]; then
+          echo "Git repository already exists. Pulling latest changes..."
+          cd project
+          git pull origin main
+        else
+          echo "Cloning new repository..."
+          git clone https://github.com/your-username/your-repo.git project
+        fi
         EOF
 
     - name: Install Backend Dependencies and Fix Vulnerabilities
