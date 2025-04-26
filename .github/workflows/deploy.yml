@@ -45,14 +45,14 @@ jobs:
         cd /home/ubuntu
         if [ ! -d "project" ]; then
           echo "Cloning repository..."
-          git clone https://${GH_TOKEN}@github.com/16khare/FInal-Major.git project
+          git clone https://${GH_TOKEN}@github.com/16khare/FInal-Major.git project/frontend
         else
           cd project
           if [ ! -d ".git" ]; then
             echo "Not a valid Git repository. Re-cloning..."
             cd ..
             rm -rf project
-            git clone https://${GH_TOKEN}@github.com/16khare/FInal-Major.git project
+            git clone https://${GH_TOKEN}@github.com/16khare/FInal-Major.git project/frontend
           else
             echo "Git repository found. Pulling latest changes..."
             git pull origin main
