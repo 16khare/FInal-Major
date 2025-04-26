@@ -28,7 +28,7 @@ jobs:
       env:
         EC2_PUBLIC_IP: ${{ secrets.AWS_HOST }}
       run: |
-        ssh -o StrictHostKeyChecking=no -i major.pem ubuntu@$EC2_PUBLIC_IP << EOF
+        ssh -o StrictHostKeyChecking=no -i major.pem ubuntu@$EC2_PUBLIC_IP << 'EOF'
         sudo apt update -y
         sudo apt install -y nginx python3 python3-pip
         sudo npm install -g pm2
@@ -41,7 +41,7 @@ jobs:
         EC2_PUBLIC_IP: ${{ secrets.AWS_HOST }}
         GH_TOKEN: ${{ secrets.GH_TOKEN }}
       run: |
-        ssh -o StrictHostKeyChecking=no -i major.pem ubuntu@$EC2_PUBLIC_IP << EOF
+        ssh -o StrictHostKeyChecking=no -i major.pem ubuntu@$EC2_PUBLIC_IP << 'EOF'
         cd /home/ubuntu
         if [ ! -d "project" ]; then
           echo "Cloning repository..."
@@ -60,12 +60,11 @@ jobs:
         fi
         EOF
 
-
     - name: Install Backend Dependencies and Fix Vulnerabilities
       env:
         EC2_PUBLIC_IP: ${{ secrets.AWS_HOST }}
       run: |
-        ssh -o StrictHostKeyChecking=no -i major.pem ubuntu@$EC2_PUBLIC_IP << EOF
+        ssh -o StrictHostKeyChecking=no -i major.pem ubuntu@$EC2_PUBLIC_IP << 'EOF'
         cd /home/ubuntu/project
         npm install
         npm audit fix --force || true
@@ -75,7 +74,7 @@ jobs:
       env:
         EC2_PUBLIC_IP: ${{ secrets.AWS_HOST }}
       run: |
-        ssh -o StrictHostKeyChecking=no -i major.pem ubuntu@$EC2_PUBLIC_IP << EOF
+        ssh -o StrictHostKeyChecking=no -i major.pem ubuntu@$EC2_PUBLIC_IP << 'EOF'
         cd /home/ubuntu/project
         pm2 delete nodeapp || true
         pm2 start app.js --name nodeapp
@@ -91,7 +90,7 @@ jobs:
       env:
         EC2_PUBLIC_IP: ${{ secrets.AWS_HOST }}
       run: |
-        ssh -o StrictHostKeyChecking=no -i major.pem ubuntu@$EC2_PUBLIC_IP << EOF
+        ssh -o StrictHostKeyChecking=no -i major.pem ubuntu@$EC2_PUBLIC_IP << 'EOF'
         sudo cp /home/ubuntu/project/nginx.conf /etc/nginx/sites-available/project-app
         sudo ln -s /etc/nginx/sites-available/project-app /etc/nginx/sites-enabled/
         sudo nginx -t
