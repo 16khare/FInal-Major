@@ -45,7 +45,7 @@ jobs:
         cd /home/ubuntu
         if [ ! -d "project" ]; then
           echo "Cloning repository..."
-          git clone https://${GH_TOKEN}@github.com/16khare/FInal-Major.git 
+          git clone https://${GH_TOKEN}@github.com/16khare/FInal-Major.git project
         else
           cd project
           if [ ! -d ".git" ]; then
